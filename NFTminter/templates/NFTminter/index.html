@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Generate NFT</title>
+</head>
+<body>
+    <header>
+        {% if user.is_authenticated %}
+            <button type="button">
+                {{ ethAdress }}
+            </button>
+        {% else %}
+            <button type="button" onclick="web3Login()">
+                Log in with Metamask
+            </button>
+        {% endif %}
+        <button type="button" onclick="mintNft()">
+            Mint NFT
+        </button>
+    </header>
+    <div>
+        <div>
+            <p2>Generate new NFT</p2>
+        </div>
+        <div>
+            <form method="POST" id="prompt">
+                {% csrf_token %}
+                <input type="text" name="prompt" id="fromPrompt">
+                <input type="submit" value="Generate" onclick="">
+            </form>
+        </div>
+    </div>
+    <img src="{{ imageNft }}" alt="" style="width:20%" id="imageNFT">
+    {% if minted %}
+    <div>
+        <p>Contract adress: {{ contractAdress }}</p>
+        <p>TokenID: {{ tokenID }}</p>
+    </div>
+    {% endif %}
+<script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js" type="application/javascript"></script>
+<script>
+function web3Login() {
+        try {
+            window.ethereum.enable().then(function () {
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                provider.getNetwork().then(function (result) {
+                    if (result['chainId'] != 11155111) {
+                        alert('Switch to Sepoila!');
+                    } else {
+                        provider.listAccounts().then(function (result) {
+                            accountAddress = result[0];
+                            signer = provider.getSigner();
+                            signer.signMessage("Sign to auth {{ csrf_token }}").then((signature) => {web3LoginBackend(accountAddress, signature)});
+                        })
+                    }
+                })
+            })
+        } catch {
+            alert('Please install MetaMask for your browser.')
+        }
+    }
+
+    function web3LoginBackend(accountAddress, signature) {
+        /* Отправляем данные на django view */
+        var form = document.createElement('form');
+        form.action = '{% url 'web3login' %}';
+        form.method = 'POST';
+
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'csrfmiddlewaretoken';
+        input.value = '{{ csrf_token }}';
+        form.appendChild(input);
+
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'accountAddress';
+        input.value = accountAddress;
+        form.appendChild(input);
+
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'signature';
+        input.value = signature;
+        form.appendChild(input);
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+
+    function mintNft() {
+        var imgElement = document.querySelector('img');
+        var src = imgElement.src;
+
+        console.log(src);
+
+        if (!src){
+            alert("Please generate image, if you wonna mint NFT!");
+            return 0;
+        }
+
+        var form = document.createElement('form');
+        form.action = '{% url 'mintNft' %}';
+        form.method = 'POST';
+
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'csrfmiddlewaretoken';
+        input.value = '{{ csrf_token }}';
+        form.appendChild(input);
+
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'base64';
+        input.value = src;
+        form.appendChild(input);
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+</script>
+</body>
+</html>
